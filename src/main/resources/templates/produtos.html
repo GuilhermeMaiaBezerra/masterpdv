@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Produtos - MasterPDV</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="../../css/produto.css">
+</head>
+<body>
+
+<div class="app-container">
+
+    <!-- MENU LATERAL (SIDEBAR) -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1>MasterPDV</h1>
+            <div class="tag">Painel Administrativo</div>
+        </div>
+
+        <div class="nav-menu">
+            <a class="nav-item" data-page="inicio" href="home">
+                <i class="fas fa-home"></i>
+                <span>Início</span>
+            </a>
+            <a class="nav-item" data-page="vendas" href="vendas">
+                <i class="fas fa-shopping-cart"></i>
+                <span>Vendas</span>
+            </a>
+            <a class="nav-item active" data-page="produtos" href="produtos">
+                <i class="fas fa-building"></i>
+                <span>Produtos</span>
+            </a>
+            
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="logout-mobile" id="sidebarLogoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Sair</span>
+            </div>
+            <div class="copyright">
+                MasterPDV © 2026<br>Todos os direitos reservados.
+            </div>
+        </div>
+    </aside>
+
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="main-content">
+
+
+        <div class="dashboard-content" id="dynamicContent">
+
+            <div class="produtos-container">
+                <div class="page-header">
+                    <h2><i class="fas fa-boxes"></i> Meus Produtos</h2>
+                    <button class="btn-cadastrar" id="abrirModalBtn">
+                        <i class="fas fa-plus-circle"></i> Novo Produto
+                    </button>
+                </div>
+
+                <!-- Filtros -->
+                <div class="filtros-area">
+                    <div class="filtro-group">
+                        <label><i class="fas fa-filter"></i> Categoria</label>
+                        <select id="filtroCategoria">
+                        </select>
+                    </div>
+
+                    <div class="filtro-group">
+                        <label><i class="fas fa-search"></i> Nome do Produto</label>
+                        <input type="text" id="filtroNome" placeholder="Digite para buscar...">
+                    </div>
+
+                    <button class="btn-buscar" id="btnBuscar"><i class="fas fa-search"></i> Buscar</button>
+                    <button class="btn-limpar" id="btnLimparFiltros"><i class="fas fa-eraser"></i> Limpar</button>
+                </div>
+
+                <!-- Tabela de produtos -->
+                <div class="produtos-table-wrapper">
+                    <table class="produtos-table" id="tabelaProdutos">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>Categoria</th>
+                                <th>Preço</th>
+                                <th>Estoque</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaProdutosBody">
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+</div>
+
+<!-- MODAL CADASTRO/EDIÇÃO -->
+<div class="modal-overlay" id="modalProduto">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 id="modalTitle">Cadastrar Produto</h3>
+            <button class="modal-close" id="fecharModalBtn">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            <form id="formProduto">
+
+                <input type="hidden" id="produtoId">
+
+                <div class="form-group">
+                    <label>Nome do Produto *</label>
+                    <input type="text" id="produtoNome" required placeholder="Ex: Smartphone XYZ">
+                </div>
+
+                <div class="form-group">
+                    <label>Descrição</label>
+                    <input id="produtoDescricao" placeholder="Descrição do produto"></input>
+                </div>
+
+                <div class="form-group">
+                    <label>Categoria *</label>
+                    <select id="produtoCategoria" required>
+                        <option value="">Selecione</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Preço (R$) *</label>
+                    <input type="number" step="0.01" id="produtoPreco" required placeholder="0.00">
+                </div>
+
+                <div class="form-group">
+                    <label>Quantidade em Estoque *</label>
+                    <input type="number" id="produtoEstoque" required placeholder="0">
+                </div>
+            </form>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-cancelar" id="cancelarModalBtn">Cancelar</button>
+            <button class="btn-salvar" id="salvarProdutoBtn">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+
+const API_URL = {
+    listar: '/api/produtos/listar',
+    cadastrar: '/api/produtos/cadastrar',
+    editar: '/api/produtos/editar',
+    excluir: '/api/produtos/excluir',
+    categorias: '/api/produtos/categorias'
+};
+
+// Estado global
+let produtos = [];
+let categorias = [];
+let currentFilters = { categoria_id: '', nome: '' };
+
+// ---------------------------------------
+// CARREGAR CATEGORIAS
+// ---------------------------------------
+async function carregarCategorias() {
+    const selectModal = document.getElementById('produtoCategoria');
+    const selectFiltro = document.getElementById('filtroCategoria');
+
+    selectModal.innerHTML = '<option value="">Carregando...</option>';
+    selectFiltro.innerHTML = '<option value="">Todas as categorias</option>';
+
+    try {
+        const response = await fetch(API_URL.categorias, { credentials: 'include' });
+        const data = await response.json();
+
+        if (!data.success) {
+            selectModal.innerHTML = '<option value="">Erro ao carregar categorias</option>';
+            return;
+        }
+
+        categorias = data.categorias;
+
+        // Preencher SELECT do modal
+        selectModal.innerHTML = '<option value="">Selecione</option>';
+        categorias.forEach(cat => {
+            selectModal.innerHTML += `<option value="${cat.id_categoria}">${cat.nome}</option>`;
+        });
+
+        // Preencher SELECT do filtro
+        categorias.forEach(cat => {
+            selectFiltro.innerHTML += `<option value="${cat.id_categoria}">${cat.nome}</option>`;
+        });
+
+    } catch (e) {
+        console.error("Erro categorias:", e);
+        selectModal.innerHTML = '<option value="">Erro ao carregar categorias</option>';
+    }
+}
+
+// ---------------------------------------
+// CARREGAR PRODUTOS
+// ---------------------------------------
+async function carregarProdutos() {
+    try {
+        let url = `${API_URL.listar}?categoria_id=${encodeURIComponent(currentFilters.categoria_id)}&nome=${encodeURIComponent(currentFilters.nome)}`;
+        const response = await fetch(url, { credentials: 'include' });
+
+        const data = await response.json();
+
+        if (data.success) {
+            produtos = data.produtos;
+            renderizarProdutos();
+        } else {
+            alert("Erro ao carregar produtos.");
+        }
+    } catch (error) {
+        alert("Erro ao conectar no servidor.");
+        console.error(error);
+    }
+}
+
+// ---------------------------------------
+// RENDERIZAR PRODUTOS
+// ---------------------------------------
+function renderizarProdutos() {
+    const tbody = document.getElementById('listaProdutosBody');
+
+    if (!produtos.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="sem-produtos">
+            <i class="fas fa-box-open"></i> Nenhum produto encontrado
+        </td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = produtos.map(prod => {
+        const categoriaObj = categorias.find(c => c.id_categoria == prod.categoria_id);
+        const nomeCategoria = categoriaObj ? categoriaObj.nome : prod.categoria_id;
+
+        return `
+            <tr>
+                <td>${prod.id_produto}</td>
+                <td><strong>${escapeHtml(prod.nome)}</strong></td>
+                <td><span class="tag-categoria">${nomeCategoria}</span></td>
+                <td>R$ ${formatarPreco(prod.preco)}</td>
+                <td>${prod.quantidade_estoque} un</td>
+                <td class="acoes-produto">
+                    <button class="btn-editar" onclick="editarProduto(${prod.id_produto})"><i class="fas fa-edit"></i></button>
+                    <button class="btn-excluir" onclick="excluirProduto(${prod.id_produto})"><i class="fas fa-trash-alt"></i></button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function formatarPreco(valor) {
+    return parseFloat(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+function escapeHtml(str) {
+    return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+}
+
+// ---------------------------------------
+// MODAL
+// ---------------------------------------
+function abrirModalNovo() {
+    document.getElementById("modalTitle").innerText = "Cadastrar Produto";
+    document.getElementById("formProduto").reset();
+    document.getElementById("produtoId").value = "";
+
+    document.getElementById("modalProduto").classList.add("active");
+
+    carregarCategorias(); // <-- garante sempre atualizado
+    
+}
+
+function fecharModal() {
+    document.getElementById("modalProduto").classList.remove("active");
+}
+
+// ---------------------------------------
+// EDITAR PRODUTO
+// ---------------------------------------
+window.editarProduto = async function(id) {
+    const prod = produtos.find(p => p.id_produto == id);
+    if (!prod) return;
+
+    document.getElementById("modalTitle").innerText = "Editar Produto";
+
+    await carregarCategorias(); // <-- garante categorias carregadas
+
+    document.getElementById("produtoId").value = prod.id_produto;
+    document.getElementById("produtoNome").value = prod.nome;
+    document.getElementById("produtoDescricao").value = prod.descricao ?? "";
+    document.getElementById("produtoCategoria").value = prod.categoria_id;
+    document.getElementById("produtoPreco").value = prod.preco;
+    document.getElementById("produtoEstoque").value = prod.quantidade_estoque;
+
+    document.getElementById("modalProduto").classList.add("active");
+};
+
+// ---------------------------------------
+// EXCLUIR
+// ---------------------------------------
+window.excluirProduto = async function(id) {
+    if (!confirm("Tem certeza que deseja excluir?")) return;
+
+    try {
+        const response = await fetch(API_URL.excluir, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id_produto: id })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert("Produto excluído!");
+            carregarProdutos();
+        } else {
+            alert("Erro: " + data.message);
+        }
+
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao conectar no servidor.");
+    }
+};
+
+// ---------------------------------------
+// SALVAR PRODUTO
+// ---------------------------------------
+async function salvarProduto() {
+    const id = document.getElementById("produtoId").value;
+    const nome = document.getElementById("produtoNome").value.trim();
+    const descricao = document.getElementById("produtoDescricao").value.trim();
+    const categoria_id = document.getElementById("produtoCategoria").value;
+    const preco = parseFloat(document.getElementById("produtoPreco").value);
+    const quantidade_estoque = parseInt(document.getElementById("produtoEstoque").value);
+
+    if (!nome || !categoria_id || isNaN(preco) || isNaN(quantidade_estoque)) {
+        alert("Preencha todos os campos obrigatórios.");
+        return;
+    }
+
+    const produto = { nome, descricao, categoria_id, preco, quantidade_estoque };
+
+    const url = id ? API_URL.editar : API_URL.cadastrar;
+    if (id) produto.id_produto = id;
+
+    try {
+        const response = await fetch(url, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(produto)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(id ? "Produto atualizado!" : "Produto cadastrado!");
+            fecharModal();
+            carregarProdutos();
+        } else {
+            alert(data.message);
+        }
+
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao conectar no servidor.");
+    }
+}
+
+// ---------------------------------------
+// FILTROS
+// ---------------------------------------
+document.getElementById("btnBuscar").addEventListener("click", () => {
+    currentFilters.categoria_id = document.getElementById("filtroCategoria").value;
+    currentFilters.nome = document.getElementById("filtroNome").value;
+    carregarProdutos();
+});
+
+document.getElementById("btnLimparFiltros").addEventListener("click", () => {
+    document.getElementById("filtroCategoria").value = "";
+    document.getElementById("filtroNome").value = "";
+    currentFilters = { categoria_id: "", nome: "" };
+    carregarProdutos();
+});
+
+// ---------------------------------------
+// BOTÕES
+// ---------------------------------------
+document.getElementById("abrirModalBtn").onclick = abrirModalNovo;
+document.getElementById("fecharModalBtn").onclick = fecharModal;
+document.getElementById("cancelarModalBtn").onclick = fecharModal;
+document.getElementById("salvarProdutoBtn").onclick = salvarProduto;
+
+// ---------------------------------------
+// INICIALIZAÇÃO
+// ---------------------------------------
+carregarCategorias();
+carregarProdutos();
+
+document.addEventListener("DOMContentLoaded", function() {
+
+function confirmarLogout() {
+    if (confirm("Deseja realmente sair do sistema?")) {
+       
+        window.location.href = "/logout";
+        
+    }
+}
+
+    document.getElementById("sidebarLogoutBtn").addEventListener("click", confirmarLogout);
+});
+
+</script>
+</body>
+</html>

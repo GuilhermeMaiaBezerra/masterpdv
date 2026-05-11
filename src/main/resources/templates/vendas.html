@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>MasterPDV - Ponto de Venda</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/css/vendas.css">
+</head>
+<body>
+<div class="app-container">
+    <!-- MENU LATERAL (SIDEBAR) -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1>MasterPDV</h1>
+            <div class="tag">Ponto de Venda</div>
+        </div>
+        <div class="nav-menu">
+            <a class="nav-item" data-page="inicio" href="/home">
+                <i class="fas fa-home"></i>
+                <span>Início</span>
+            </a>
+            <a class="nav-item active" data-page="vendas" href="/vendas">
+                <i class="fas fa-shopping-cart"></i>
+                <span>Vendas</span>
+            </a>
+            <a class="nav-item" data-page="produtos" href="/produtos">
+                <i class="fas fa-building"></i>
+                <span>Produtos</span>
+            </a>
+        </div>
+        <div class="sidebar-footer">
+            <div class="logout-mobile" id="sidebarLogoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Sair</span>
+            </div>
+            <div class="copyright">
+                MasterPDV - MasterPDV © 2026<br>Todos os direitos reservados.
+            </div>
+        </div>
+    </aside>
+
+    <!-- CONTEÚDO PRINCIPAL - PDV -->
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="greeting">
+                <h2><i class="fas fa-cash-register"></i> Ponto de Venda (PDV)</h2>
+            </div>
+            <div class="info">
+                <span style="color: #64748b;">Data: <span id="dataAtual"></span></span>
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            <div class="pdv-container">
+                <!-- Painel de Produtos -->
+                <div class="products-panel">
+                    <div class="search-bar">
+                        <i class="fas fa-search" style="color: #94a3b8;"></i>
+                        <input type="text" id="searchInput" placeholder="Buscar produto por nome...">
+                        <button onclick="buscarProdutos()">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                        <button onclick="limparBusca()" style="background: #64748b;">
+                            <i class="fas fa-times"></i> Limpar
+                        </button>
+                    </div>
+                    
+                    <div class="products-grid" id="productsGrid">
+                        <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
+                            <i class="fas fa-spinner fa-pulse" style="font-size: 2rem; color: #3b82f6;"></i>
+                            <p>Carregando produtos...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Painel do Carrinho -->
+                <div class="cart-panel">
+                    <div class="cart-header">
+                        <h3>
+                            <i class="fas fa-shopping-cart"></i>
+                            Carrinho
+                        </h3>
+                    </div>
+
+                    <div class="cart-items" id="cartItems">
+                        <div style="text-align: center; color: #94a3b8; padding: 40px 20px;">
+                            <i class="fas fa-shopping-basket" style="font-size: 3rem; margin-bottom: 12px;"></i>
+                            <p>Carrinho vazio</p>
+                        </div>
+                    </div>
+
+                    <div class="cart-summary">
+                        <div class="summary-line">
+                            <span>Subtotal:</span>
+                            <span id="subtotal">R$ 0,00</span>
+                        </div>
+                        <div class="summary-line">
+                            <span>Desconto:</span>
+                            <input type="number" id="desconto" placeholder="0" step="0.01" value="0">
+                            <span id="descontoValor">R$ 0,00</span>
+                        </div>
+                        <div class="summary-total">
+                            <span>Total:</span>
+                            <span id="total">R$ 0,00</span>
+                        </div>
+
+                        <div class="payment-methods">
+                            <select id="formaPagamento">
+                                <option value="Dinheiro">Dinheiro</option>
+                                <option value="PIX">PIX</option>
+                                <option value="Crédito">Cartão de Crédito</option>
+                                <option value="Débito">Cartão de Débito</option>
+                            </select>
+                        </div>
+
+                        <div class="cart-actions">
+                            <button class="btn-cancel" onclick="limparCarrinho()">
+                                <i class="fas fa-trash"></i> Limpar
+                            </button>
+                            <button class="btn-finalize" onclick="finalizarVenda()">
+                                <i class="fas fa-check"></i> Finalizar Venda
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Loading -->
+<div class="loading" id="loading">
+    <div class="loading-spinner"></div>
+</div>
+
+<!-- Modal de Finalização -->
+<div id="modalFinalizar" class="modal">
+    <div class="modal-content">
+        <h3><i class="fas fa-check-circle"></i> Finalizar Venda</h3>
+        <div class="modal-info" id="modalInfo"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel-modal" onclick="fecharModal()">Cancelar</button>
+            <button class="btn-confirm" onclick="confirmarVenda()">Confirmar Venda</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Carrinho de compras
+let carrinho = [];
+
+// Mostrar/Esconder loading
+function showLoading() {
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'flex';
+}
+
+function hideLoading() {
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'none';
+}
+
+// Mostrar data atual
+function atualizarData() {
+    const agora = new Date();
+    const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + 
+                         agora.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+    const dataAtual = document.getElementById('dataAtual');
+    if (dataAtual) dataAtual.textContent = dataFormatada;
+}
+
+// Buscar produtos da API Spring Boot
+async function buscarProdutos() {
+    const busca = document.getElementById('searchInput').value;
+    showLoading();
+    
+    try {
+        let url = '/api/vendas/listar_produtos';
+        if (busca && busca.trim() !== '') {
+            url += `?busca=${encodeURIComponent(busca)}`;
+        }
+        
+        console.log('🔍 Buscando produtos URL:', url);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        console.log('📡 Status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('📦 Dados recebidos:', data);
+        
+        if (data.success) {
+            renderizarProdutos(data.produtos);
+        } else {
+            console.error('❌ Erro:', data.error);
+            mostrarNotificacao(data.error || 'Erro ao carregar produtos', 'error');
+            renderizarProdutos([]);
+        }
+    } catch (error) {
+        console.error('❌ Erro na requisição:', error);
+        mostrarNotificacao('Erro ao conectar com o servidor. Verifique se o Spring Boot está rodando.', 'error');
+        renderizarProdutos([]);
+    } finally {
+        hideLoading();
+    }
+}
+
+// Renderizar produtos na grid
+function renderizarProdutos(produtos) {
+    const productsGrid = document.getElementById('productsGrid');
+    
+    if (!productsGrid) return;
+    
+    if (!produtos || produtos.length === 0) {
+        productsGrid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #64748b;">
+                <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 16px;"></i>
+                <p>Nenhum produto encontrado</p>
+            </div>
+        `;
+        return;
+    }
+    
+    productsGrid.innerHTML = produtos.map(produto => {
+        const precoNumerico = typeof produto.preco === 'number' ? produto.preco : parseFloat(produto.preco);
+        const estoque = produto.quantidade_estoque || 0;
+        const nomeCategoria = produto.categoria_nome || 'Sem categoria';
+        const nomeProduto = produto.nome.replace(/'/g, "\\'");
+        
+        return `
+            <div class="product-card" onclick="adicionarAoCarrinho(${produto.id_produto}, '${nomeProduto}', ${precoNumerico}, ${estoque})">
+                <div class="product-category">
+                    <i class="fas fa-tag"></i> ${nomeCategoria}
+                </div>
+                <div class="product-name">${produto.nome}</div>
+                <div class="product-price">R$ ${formatarMoeda(precoNumerico)}</div>
+                <div class="product-stock ${estoque < 10 ? 'stock-low' : ''}">
+                    <i class="fas fa-box"></i> Estoque: ${estoque} unidades
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Limpar busca
+function limparBusca() {
+    document.getElementById('searchInput').value = '';
+    buscarProdutos();
+}
+
+// Adicionar produto ao carrinho
+function adicionarAoCarrinho(id, nome, preco, estoque) {
+    const precoNumerico = typeof preco === 'number' ? preco : parseFloat(preco);
+    
+    if (isNaN(precoNumerico)) {
+        mostrarNotificacao(`Erro: Preço inválido para ${nome}`, 'error');
+        return;
+    }
+    
+    const itemExistente = carrinho.find(item => item.id === id);
+    const quantidadeAtual = itemExistente ? itemExistente.quantidade : 0;
+    
+    if (quantidadeAtual + 1 > estoque) {
+        mostrarNotificacao(`Estoque insuficiente para ${nome}. Disponível: ${estoque}`, 'error');
+        return;
+    }
+    
+    if (itemExistente) {
+        itemExistente.quantidade++;
+    } else {
+        carrinho.push({
+            id: id,
+            nome: nome,
+            preco: precoNumerico,
+            quantidade: 1
+        });
+    }
+    
+    atualizarCarrinho();
+    mostrarNotificacao(`${nome} adicionado ao carrinho!`, 'success');
+}
+
+// Remover um item do carrinho
+function removerDoCarrinho(id) {
+    const index = carrinho.findIndex(item => item.id === id);
+    if (index !== -1) {
+        if (carrinho[index].quantidade > 1) {
+            carrinho[index].quantidade--;
+        } else {
+            carrinho.splice(index, 1);
+        }
+        atualizarCarrinho();
+    }
+}
+
+// Remover item completamente
+function removerItemCompleto(id) {
+    carrinho = carrinho.filter(item => item.id !== id);
+    atualizarCarrinho();
+    mostrarNotificacao('Item removido do carrinho', 'success');
+}
+
+// Limpar carrinho
+function limparCarrinho() {
+    if (carrinho.length > 0 && confirm('Deseja realmente limpar todo o carrinho?')) {
+        carrinho = [];
+        atualizarCarrinho();
+        const descontoInput = document.getElementById('desconto');
+        if (descontoInput) descontoInput.value = '0';
+        mostrarNotificacao('Carrinho limpo com sucesso!', 'success');
+    }
+}
+
+// Calcular totais
+function calcularTotais() {
+    const subtotal = carrinho.reduce((total, item) => {
+        return total + (item.preco * item.quantidade);
+    }, 0);
+    
+    const descontoInput = document.getElementById('desconto');
+    const desconto = descontoInput ? (parseFloat(descontoInput.value) || 0) : 0;
+    const total = Math.max(0, subtotal - desconto);
+    
+    return { subtotal, desconto, total };
+}
+
+// Atualizar interface do carrinho
+function atualizarCarrinho() {
+    const cartItemsContainer = document.getElementById('cartItems');
+    const { subtotal, desconto, total } = calcularTotais();
+    
+    if (!cartItemsContainer) return;
+    
+    if (carrinho.length === 0) {
+        cartItemsContainer.innerHTML = `
+            <div style="text-align: center; color: #94a3b8; padding: 40px 20px;">
+                <i class="fas fa-shopping-basket" style="font-size: 3rem; margin-bottom: 12px;"></i>
+                <p>Carrinho vazio</p>
+                <p style="font-size: 0.85rem;">Clique nos produtos para adicionar</p>
+            </div>
+        `;
+    } else {
+        cartItemsContainer.innerHTML = carrinho.map(item => {
+            const subtotalItem = item.preco * item.quantidade;
+            const nomeEscapado = item.nome.replace(/'/g, "\\'");
+            
+            return `
+                <div class="cart-item">
+                    <div class="cart-item-info">
+                        <div class="cart-item-name">${item.nome}</div>
+                        <div class="cart-item-price">R$ ${formatarMoeda(item.preco)}</div>
+                    </div>
+                    <div class="cart-item-quantity">
+                        <button onclick="removerDoCarrinho(${item.id})">-</button>
+                        <span>${item.quantidade}</span>
+                        <button onclick="adicionarAoCarrinho(${item.id}, '${nomeEscapado}', ${item.preco}, 999)">+</button>
+                    </div>
+                    <div class="cart-item-subtotal">
+                        R$ ${formatarMoeda(subtotalItem)}
+                    </div>
+                    <div class="cart-item-remove" onclick="removerItemCompleto(${item.id})">
+                        <i class="fas fa-trash"></i>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    const subtotalEl = document.getElementById('subtotal');
+    const descontoValorEl = document.getElementById('descontoValor');
+    const totalEl = document.getElementById('total');
+    
+    if (subtotalEl) subtotalEl.innerHTML = `R$ ${formatarMoeda(subtotal)}`;
+    if (descontoValorEl) descontoValorEl.innerHTML = `R$ ${formatarMoeda(desconto)}`;
+    if (totalEl) totalEl.innerHTML = `R$ ${formatarMoeda(total)}`;
+}
+
+// Formatar moeda
+function formatarMoeda(valor) {
+    return valor.toFixed(2).replace('.', ',');
+}
+
+// Mostrar notificação
+function mostrarNotificacao(mensagem, tipo = 'success') {
+    const notificacao = document.createElement('div');
+    notificacao.textContent = mensagem;
+    const cor = tipo === 'success' ? '#10b981' : '#ef4444';
+    notificacao.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: ${cor};
+        color: white;
+        padding: 12px 24px;
+        border-radius: 12px;
+        z-index: 1001;
+        animation: slideIn 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        font-size: 14px;
+    `;
+    
+    document.body.appendChild(notificacao);
+    
+    setTimeout(() => {
+        notificacao.remove();
+    }, 3000);
+}
+
+// Finalizar venda - mostrar modal
+function finalizarVenda() {
+    if (carrinho.length === 0) {
+        mostrarNotificacao('Carrinho vazio! Adicione produtos antes de finalizar.', 'error');
+        return;
+    }
+    
+    const { subtotal, desconto, total } = calcularTotais();
+    const formaPagamentoSelect = document.getElementById('formaPagamento');
+    const formaPagamento = formaPagamentoSelect ? formaPagamentoSelect.value : 'Dinheiro';
+    const itensCount = carrinho.reduce((sum, item) => sum + item.quantidade, 0);
+    
+    const modalInfo = document.getElementById('modalInfo');
+    if (modalInfo) {
+        modalInfo.innerHTML = `
+            <p><strong>📦 Itens:</strong> ${itensCount} produto(s)</p>
+            <p><strong>💰 Subtotal:</strong> R$ ${formatarMoeda(subtotal)}</p>
+            ${desconto > 0 ? `<p><strong>💸 Desconto:</strong> R$ ${formatarMoeda(desconto)}</p>` : ''}
+            <p><strong>💵 Total:</strong> <span style="font-size: 1.2rem; color: #10b981;">R$ ${formatarMoeda(total)}</span></p>
+            <p><strong>💳 Forma de Pagamento:</strong> ${formaPagamento}</p>
+            <hr style="margin: 12px 0;">
+            <p style="font-size: 0.85rem; color: #64748b;"><i class="fas fa-receipt"></i> Confirme os dados da venda</p>
+        `;
+    }
+    
+    const modal = document.getElementById('modalFinalizar');
+    if (modal) modal.style.display = 'flex';
+}
+
+// Fechar modal
+function fecharModal() {
+    const modal = document.getElementById('modalFinalizar');
+    if (modal) modal.style.display = 'none';
+}
+
+// Confirmar venda - integração com API Spring Boot
+// Confirmar venda - integração com API Spring Boot
+async function confirmarVenda() {
+    if (carrinho.length === 0) {
+        mostrarNotificacao('Carrinho vazio!', 'error');
+        return;
+    }
+    
+    const { subtotal, desconto, total } = calcularTotais();
+    const formaPagamentoSelect = document.getElementById('formaPagamento');
+    const formaPagamento = formaPagamentoSelect ? formaPagamentoSelect.value : 'Dinheiro';
+    
+    const produtosVenda = carrinho.map(item => ({
+        id: Number(item.id),
+        nome: item.nome,
+        preco: Number(item.preco),
+        quantidade: Number(item.quantidade)
+    }));
+    
+    const vendaData = {
+        produtos: produtosVenda,
+        forma_pagamento: formaPagamento,
+        subtotal: Number(subtotal),
+        desconto: Number(desconto),
+        total: Number(total)
+    };
+    
+    console.log('📤 Enviando venda:', JSON.stringify(vendaData, null, 2));
+    
+    showLoading();
+    fecharModal();
+    
+    try {
+        const response = await fetch('/api/vendas/registrar_venda', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(vendaData)
+        });
+        
+        console.log('📡 Status da resposta:', response.status);
+        console.log('📡 Headers:', response.headers);
+        
+        // Tentar ler a resposta como texto primeiro
+        const responseText = await response.text();
+        console.log('📥 Resposta bruta:', responseText);
+        
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch(e) {
+            console.error('Erro ao parsear JSON:', e);
+            data = { success: false, error: responseText };
+        }
+        
+        console.log('📥 Resposta parseada:', data);
+        
+        if (response.ok && data.success) {
+            // Mostrar comprovante
+            let comprovante = `🏪 MASTERPDV - COMPROVANTE DE VENDA\n`;
+            comprovante += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+            comprovante += `Venda #: ${data.id_venda}\n`;
+            comprovante += `Data: ${new Date().toLocaleString('pt-BR')}\n`;
+            comprovante += `Forma Pagamento: ${formaPagamento}\n`;
+            comprovante += `\nITENS:\n`;
+            carrinho.forEach(item => {
+                comprovante += `${item.quantidade}x ${item.nome} - R$ ${formatarMoeda(item.preco * item.quantidade)}\n`;
+            });
+            comprovante += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+            comprovante += `Subtotal: R$ ${formatarMoeda(subtotal)}\n`;
+            if (desconto > 0) comprovante += `Desconto: R$ ${formatarMoeda(desconto)}\n`;
+            comprovante += `TOTAL: R$ ${formatarMoeda(total)}\n`;
+            comprovante += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+            comprovante += `Obrigado pela compra!\n`;
+            comprovante += `MasterPDV - Seu sistema de gestão`;
+            
+            alert(comprovante);
+            
+            // Limpar carrinho
+            carrinho = [];
+            atualizarCarrinho();
+            const descontoInput = document.getElementById('desconto');
+            if (descontoInput) descontoInput.value = '0';
+            
+            mostrarNotificacao('✅ Venda finalizada com sucesso!', 'success');
+            
+            // Recarregar produtos para atualizar estoque
+            buscarProdutos();
+        } else {
+            mostrarNotificacao('Erro ao finalizar venda: ' + (data.error || data.message || 'Erro desconhecido'), 'error');
+        }
+    } catch (error) {
+        console.error('❌ Erro na requisição:', error);
+        mostrarNotificacao('Erro ao conectar com o servidor: ' + error.message, 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Logout
+function confirmarLogout() {
+    if (confirm("Deseja realmente sair do sistema?")) {
+        window.location.href = "/logout";
+    }
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Atualizar data
+    atualizarData();
+    setInterval(atualizarData, 1000);
+    
+    // Evento do desconto
+    const descontoInput = document.getElementById('desconto');
+    if (descontoInput) {
+        descontoInput.addEventListener('input', function() {
+            atualizarCarrinho();
+        });
+    }
+    
+    // Carregar produtos ao iniciar
+    buscarProdutos();
+    
+    // Buscar ao pressionar Enter
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                buscarProdutos();
+            }
+        });
+    }
+    
+    // Logout
+    const logoutBtn = document.getElementById("sidebarLogoutBtn");
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", confirmarLogout);
+    }
+});
+
+// Animação CSS
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+
+</body>
+</html>
